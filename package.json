@@ -1,0 +1,78 @@
+{
+  "name": "use-split-view",
+  "version": "0.1.0",
+  "description": "Headless React hook for split-view side-by-side comparison with zoom/pan/pinch support",
+  "author": "nemezzizz",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NemeZZiZZ/use-split-view.git"
+  },
+  "homepage": "https://nemezzizz.github.io/use-split-view",
+  "bugs": {
+    "url": "https://github.com/NemeZZiZZ/use-split-view/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepublishOnly": "npm run typecheck && npm run lint && npm run build"
+  },
+  "dependencies": {
+    "use-zoom-pinch": "^0.1.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/react": "^19.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "react": "^19.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0"
+  },
+  "keywords": [
+    "react",
+    "split-view",
+    "side-by-side",
+    "comparison",
+    "before-after",
+    "image-comparison",
+    "zoom",
+    "pinch",
+    "pan",
+    "headless",
+    "react-hook"
+  ]
+}
