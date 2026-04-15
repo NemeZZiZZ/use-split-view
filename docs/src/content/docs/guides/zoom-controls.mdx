@@ -1,0 +1,114 @@
+---
+title: Zoom Controls
+description: Build toolbar buttons for zoom in, zoom out, reset, and display the current zoom percentage.
+---
+
+import { Aside } from "@astrojs/starlight/components"
+
+`useSplitView` exposes everything you need to build an imperative zoom toolbar: current state (`view`, `displayZoomPct`), setters (`setView`, `centerZoom`, `resetView`), and — through the re-exported `useZoomPinch` API — advanced helpers like `zoomIn`, `zoomOut`, and `zoomTo`.
+
+## The basics
+
+```tsx
+const { view, centerZoom, resetView, displayZoomPct } = useSplitView()
+
+return (
+  <div>
+    <button onClick={() => centerZoom(view.zoom * 1.5)}>Zoom In</button>
+    <button onClick={() => centerZoom(view.zoom / 1.5)}>Zoom Out</button>
+    <button onClick={resetView}>Reset</button>
+    <span>{displayZoomPct}%</span>
+  </div>
+)
+```
+
+`centerZoom(targetZoom)` zooms to the target level keeping the **container center** as the anchor, so the middle of what you see stays in place.
+
+## Display percentage vs raw zoom
+
+There are two useful zoom values:
+
+- **`view.zoom`** — the raw zoom multiplier relative to `fitScale`. `1` means "content fits the container exactly."
+- **`displayZoomPct`** — a user-facing integer: `round(view.zoom * fitScale * 100)`. This is what you typically show in the UI.
+
+For a 3200×2000 image inside an 800×500 container, `fitScale ≈ 0.25`. When the user hasn't zoomed, `view.zoom = 1` but `displayZoomPct = 25` — meaning "showing the image at 25% of its native size."
+
+```tsx
+<span>{displayZoomPct}%</span>
+```
+
+## Reset
+
+```tsx
+<button onClick={resetView}>Reset</button>
+```
+
+`resetView()` snaps the view back to `{ x: 0, y: 0, zoom: 1 }`.
+
+<Aside type="tip">
+  Because `view.zoom = 1` is "fit", reset effectively returns the user to the fitted view, not to
+  "100% native" — which matches what people usually expect in comparison tools.
+</Aside>
+
+## Snap to 100%
+
+If you want a button that shows content at its true native size (1 image pixel = 1 screen pixel), target `1 / fitScale`:
+
+```tsx
+const { fitScale, centerZoom } = useSplitView()
+
+<button onClick={() => centerZoom(1 / fitScale)}>100%</button>
+```
+
+## Custom zoom steps
+
+A discrete zoom ladder (25% / 50% / 100% / 200% / 400%):
+
+```tsx
+const steps = [0.25, 0.5, 1, 2, 4]
+
+<select
+  value={Math.round(view.zoom * fitScale * 100) / 100}
+  onChange={(e) => centerZoom(Number(e.target.value) / fitScale)}
+>
+  {steps.map((s) => (
+    <option key={s} value={s}>
+      {s * 100}%
+    </option>
+  ))}
+</select>
+```
+
+## Using the re-exported `useZoomPinch` API
+
+The underlying hook (re-exported as `useZoomPinch` from `use-split-view`) offers richer imperative methods. Because `useSplitView` internally calls `useZoomPinch`, any callbacks that mutate state through `setView` are effectively compatible — but if you want, for example, animated zoom or `zoomIn` / `zoomOut` helpers, you can replicate them manually:
+
+```tsx
+const zoomInStep = (step = 1.5) => centerZoom(view.zoom * step)
+const zoomOutStep = (step = 1.5) => centerZoom(view.zoom / step)
+```
+
+The re-exported easing functions (`linear`, `easeOut`, `easeInOut`) are available for CSS transitions you might add to the content layer or handle.
+
+## Keyboard shortcuts
+
+Add keyboard zoom by listening on the container:
+
+```tsx
+const { containerRef, view, centerZoom, resetView } = useSplitView()
+
+useEffect(() => {
+  const el = containerRef.current
+  if (!el) return
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === "+" || e.key === "=") centerZoom(view.zoom * 1.5)
+    else if (e.key === "-") centerZoom(view.zoom / 1.5)
+    else if (e.key === "0") resetView()
+  }
+  el.addEventListener("keydown", onKey)
+  return () => el.removeEventListener("keydown", onKey)
+}, [view.zoom, centerZoom, resetView])
+
+// And make the container focusable:
+<div ref={containerRef} tabIndex={0}>...</div>
+```

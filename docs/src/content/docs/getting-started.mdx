@@ -1,0 +1,156 @@
+---
+title: Getting Started
+description: Install and set up useSplitView in your React project.
+---
+
+import { Steps, Tabs, TabItem, Aside } from "@astrojs/starlight/components"
+import SplitViewDemo from "../../components/SplitViewDemo.tsx"
+
+## Installation
+
+<Tabs>
+  <TabItem label="npm">```bash npm install use-split-view ```</TabItem>
+  <TabItem label="pnpm">```bash pnpm add use-split-view ```</TabItem>
+  <TabItem label="yarn">```bash yarn add use-split-view ```</TabItem>
+  <TabItem label="bun">```bash bun add use-split-view ```</TabItem>
+</Tabs>
+
+**Requirements:** React 18+ (peer dependency). `use-zoom-pinch` ships as a direct dependency and is re-exported for convenience.
+
+## Basic Usage
+
+<Steps>
+
+1. **Create a container ref** — the outer element that owns the split and receives gesture events.
+
+2. **Call the hook** — destructure `getPaneState`, `handleProps`, and `setNaturalSize`.
+
+3. **Render two panes** — each wrapped in a clip layer + transform layer + content layer.
+
+4. **Render a drag handle** — spread `handleProps` on an absolutely-positioned element.
+
+5. **Report natural size** — call `setNaturalSize(width, height)` once your content loads.
+
+</Steps>
+
+```tsx
+import { useSplitView } from "use-split-view"
+
+function ImageComparison() {
+  const { containerRef, getPaneState, handleProps, setNaturalSize, split } = useSplitView()
+
+  const start = getPaneState("start")
+  const end = getPaneState("end")
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: 500,
+        overflow: "hidden",
+        touchAction: "none",
+        userSelect: "none",
+      }}
+    >
+      {/* Start pane */}
+      <div style={{ position: "absolute", inset: 0, clipPath: start.clipPath }}>
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            transformOrigin: "top left",
+            transform: start.transform,
+          }}
+        >
+          <div style={start.contentStyle}>
+            <img
+              src="/before.jpg"
+              style={{ width: "100%", height: "100%", objectFit: "fill" }}
+              draggable={false}
+              onLoad={(e) => {
+                const { naturalWidth, naturalHeight } = e.currentTarget
+                setNaturalSize(naturalWidth, naturalHeight)
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* End pane */}
+      <div style={{ position: "absolute", inset: 0, clipPath: end.clipPath }}>
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            transformOrigin: "top left",
+            transform: end.transform,
+          }}
+        >
+          <div style={end.contentStyle}>
+            <img
+              src="/after.jpg"
+              style={{ width: "100%", height: "100%", objectFit: "fill" }}
+              draggable={false}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Drag handle */}
+      <div
+        {...handleProps}
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: `${split}%`,
+          width: 24,
+          transform: "translateX(-50%)",
+          cursor: "col-resize",
+          zIndex: 10,
+        }}
+      >
+        <div
+          style={{
+            width: 2,
+            height: "100%",
+            margin: "0 auto",
+            backgroundColor: "white",
+            boxShadow: "0 0 4px rgba(0,0,0,0.5)",
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+```
+
+<Aside type="tip">
+  Always set `touchAction: "none"` and `userSelect: "none"` on the container so browsers don't
+  hijack touch scrolling or accidentally select text while the user is dragging.
+</Aside>
+
+## Live preview
+
+<SplitViewDemo client:only="react" />
+
+## What works out of the box
+
+With zero configuration you get:
+
+- **Drag handle** with pointer capture — tracking stays correct even when the cursor leaves the element
+- **Automatic zoom/pan lock** while the handle is being dragged
+- **Mouse wheel** scroll to pan, ctrl/⌘ + wheel to zoom
+- **Trackpad** two-finger pan and pinch to zoom
+- **Touch pinch-to-zoom** on mobile
+- **Pointer drag** across either pane pans the synchronized view
+- **Fit-to-container** once `setNaturalSize` is called
+- **Zoom compensation** when the natural size changes (e.g. progressive image upgrade)
+
+## Next steps
+
+- [Anatomy of a Split View](/use-split-view/guides/anatomy/) — understand the three-layer structure
+- [Horizontal & Vertical](/use-split-view/guides/direction/) — flip between layouts
+- [API Reference](/use-split-view/reference/api/) — complete options and return values

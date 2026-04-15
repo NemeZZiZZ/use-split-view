@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0 (2026-04-16)
+
+### Features
+
+- Bump `use-zoom-pinch` peer to `^0.3.0` — unlocks rotation, inertia, bounds, keyboard navigation, zoom snap levels, snap-to-grid, double-tap, activation keys, animated transitions, coordinate conversion, and imperative methods (`zoomIn`, `zoomOut`, `zoomTo`, `panTo`, `panBy`, `fitToRect`, `fitToContent`, `zoomToElement`, `rotateTo`, `rotateBy`, `snapZoom`, `screenToContent`, `contentToScreen`) via the re-exported `useZoomPinch`
+- Re-export new types: `AnimationOptions`, `EasingFunction`, `BoundsOptions`, `GesturesOptions`, `InertiaOptions`, `DoubleTapOptions`, `RotationOptions`, `KeyboardOptions`, `CursorOptions`, `ActivationKeyOptions`, `SnapToGridOptions`, `ZoomSnapLevel`
+- Re-export easing helpers: `easeInOut`, `easeOut`, `linear`
+- Starlight/Astro documentation site under `docs/`
+
+### Notes
+
+- Fully backward compatible — no changes to `useSplitView` API
+- `setView` now accepts an optional second argument `AnimationOptions` for animated transitions (passthrough from `use-zoom-pinch`)
+
 ## 0.1.0 (2026-04-07)
 
 ### Features

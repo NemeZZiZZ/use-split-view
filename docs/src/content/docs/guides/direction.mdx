@@ -1,0 +1,101 @@
+---
+title: Horizontal & Vertical
+description: Switch between left/right and top/bottom splits with a single prop.
+---
+
+import SplitViewDemo from "../../../components/SplitViewDemo.tsx"
+
+`useSplitView` supports both `"horizontal"` and `"vertical"` orientations through the `direction` option. Everything else — the API, the three-layer structure, zoom/pan synchronization — stays identical.
+
+## Horizontal (default)
+
+```tsx
+const sv = useSplitView({ direction: "horizontal" })
+```
+
+- Start pane is the **left** half, end pane is the **right** half
+- Handle is positioned vertically along `left: ${split}%`
+- Dragging left/right changes `split`
+
+```tsx
+<div
+  {...sv.handleProps}
+  style={{
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: `${sv.split}%`,
+    width: 24,
+    transform: "translateX(-50%)",
+    cursor: "col-resize",
+  }}
+/>
+```
+
+## Vertical
+
+```tsx
+const sv = useSplitView({ direction: "vertical" })
+```
+
+- Start pane is the **top** half, end pane is the **bottom** half
+- Handle is positioned horizontally along `top: ${split}%`
+- Dragging up/down changes `split`
+
+```tsx
+<div
+  {...sv.handleProps}
+  style={{
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: `${sv.split}%`,
+    height: 24,
+    transform: "translateY(-50%)",
+    cursor: "row-resize",
+  }}
+/>
+```
+
+The hook automatically swaps the `clipPath` math between `inset(0 Xpct 0 0)` / `inset(0 0 0 Xpct)` and `inset(0 0 Xpct 0)` / `inset(Xpct 0 0 0)` under the hood, so your pane markup doesn't change.
+
+## Switching at runtime
+
+`direction` is reactive — toggle a piece of state and re-render:
+
+```tsx
+const [direction, setDirection] = useState<SplitViewDirection>("horizontal")
+const sv = useSplitView({ direction })
+
+<button onClick={() => setDirection(d => d === "horizontal" ? "vertical" : "horizontal")}>
+  Flip
+</button>
+```
+
+When you flip the direction, the current `split` percentage is preserved, and the zoom/pan view state is untouched. You'll need to conditionally render the handle with the correct positioning:
+
+```tsx
+const handleStyle =
+  direction === "horizontal"
+    ? { top: 0, bottom: 0, left: `${sv.split}%`, width: 24, transform: "translateX(-50%)", cursor: "col-resize" }
+    : { left: 0, right: 0, top: `${sv.split}%`, height: 24, transform: "translateY(-50%)", cursor: "row-resize" }
+
+return <div {...sv.handleProps} style={{ position: "absolute", zIndex: 10, ...handleStyle }} />
+```
+
+## Live preview
+
+Click **Horizontal / Vertical** in the toolbar to see the same hook flip orientation:
+
+<SplitViewDemo client:only="react" />
+
+## Initial split position
+
+Use `initialSplit` to set where the divider starts (0–100):
+
+```tsx
+useSplitView({ direction: "horizontal", initialSplit: 30 }) // 30% from the left
+useSplitView({ direction: "vertical", initialSplit: 70 })   // 70% from the top
+```
+
+You can also drive `split` imperatively with `setSplit(value)` from the return object, e.g. to animate the handle into view on mount or snap to 50% on double-click.

@@ -1,0 +1,154 @@
+---
+title: Types
+description: All TypeScript types exported from use-split-view.
+---
+
+`use-split-view` is written in TypeScript with full type exports. Everything is tree-shakeable.
+
+## `useSplitView` types
+
+### `UseSplitViewOptions`
+
+```ts
+interface UseSplitViewOptions {
+  /** Split orientation. @default "horizontal" */
+  direction?: SplitViewDirection
+  /** Initial split position as a percentage (0–100). @default 50 */
+  initialSplit?: number
+  /** Minimum allowed zoom level. @default 0.1 */
+  minScale?: number
+  /** Maximum allowed zoom level. @default 50 */
+  maxScale?: number
+  /** Multiplier for pan speed (mouse wheel only). @default 1 */
+  panSpeed?: number
+  /** Multiplier for zoom speed (mouse wheel only). @default 1 */
+  zoomSpeed?: number
+  /** Controlled view state. When provided, the hook becomes controlled. */
+  viewState?: ViewState
+  /** Callback fired on every view change. Required for controlled mode. */
+  onViewStateChange?: (view: ViewState) => void
+}
+```
+
+### `UseSplitViewReturn`
+
+```ts
+interface UseSplitViewReturn {
+  containerRef: RefObject<HTMLDivElement | null>
+  split: number
+  setSplit: (value: number) => void
+  view: ViewState
+  setView: (v: ViewState, opts?: AnimationOptions) => void
+  centerZoom: (targetZoom: number) => void
+  resetView: () => void
+  direction: SplitViewDirection
+  isLocked: boolean
+  setIsLocked: (locked: boolean) => void
+  containerSize: { w: number; h: number }
+  naturalSize: { w: number; h: number } | null
+  setNaturalSize: (w: number, h: number) => void
+  fitScale: number
+  displaySize: { w: number; h: number }
+  displayZoomPct: number
+  getPaneState: (part: "start" | "end") => SplitPaneState
+  handleProps: HandleProps
+  splitCSSValue: string
+}
+```
+
+### `SplitViewDirection`
+
+```ts
+type SplitViewDirection = "horizontal" | "vertical"
+```
+
+### `SplitPaneState`
+
+```ts
+interface SplitPaneState {
+  /** CSS clip-path string for this pane */
+  clipPath: string
+  /** CSS transform string for the zoom/pan layer */
+  transform: string
+  /** Style for the content sizing layer */
+  contentStyle: CSSProperties
+}
+```
+
+## Re-exported from `use-zoom-pinch`
+
+### `ViewState`
+
+```ts
+interface ViewState {
+  x: number
+  y: number
+  zoom: number
+  /** Rotation angle in degrees. @default 0 */
+  rotation?: number
+}
+```
+
+### `AnimationOptions`
+
+```ts
+interface AnimationOptions {
+  /** Enable animated transition. @default false */
+  animate?: boolean
+  /** Animation duration in milliseconds. @default 300 */
+  duration?: number
+  /** Easing function. @default easeOut */
+  easing?: EasingFunction
+}
+
+type EasingFunction = (t: number) => number
+```
+
+### Advanced `useZoomPinch` types
+
+These come along for the ride when you use the re-exported `useZoomPinch` directly:
+
+- **`UseZoomPinchOptions`** — all options for the underlying zoom/pinch hook (bounds, gestures, inertia, keyboard, rotation, snap, activation keys, wheelMode, axis, cursor management, etc.)
+- **`UseZoomPinchReturn`** — imperative helpers (`zoomIn`, `zoomOut`, `zoomTo`, `panTo`, `panBy`, `fitToRect`, `fitToContent`, `zoomToElement`, `rotateTo`, `rotateBy`, `snapZoom`, `screenToContent`, `contentToScreen`, `isAnimating`)
+- **`BoundsOptions`** — `minX`, `maxX`, `minY`, `maxY`, `mode: "clamp" | "bounce"`, `bounceFactor`
+- **`GesturesOptions`** — toggles for `pan`, `zoom`, `rotate`
+- **`InertiaOptions`** — `enabled`, `friction`
+- **`DoubleTapOptions`** — `enabled`, `mode: "zoomIn" | "reset" | "toggle"`, `step`
+- **`RotationOptions`** — `minAngle`, `maxAngle`, `snapLevels`
+- **`KeyboardOptions`** — `enabled`, `panStep`, `zoomStep`, `rotateStep`
+- **`CursorOptions`** — `enabled`, `idle`, `dragging`, `zooming`
+- **`ActivationKeyOptions`** — `pan`, `zoom`, `rotate` key names
+- **`SnapToGridOptions`** — `size`, `mode: "end" | "always"`
+- **`ZoomSnapLevel`** — `number`
+
+See the [use-zoom-pinch reference](https://nemezzizz.github.io/use-zoom-pinch/reference/types/) for full signatures.
+
+## Easing helpers
+
+```ts
+import { linear, easeOut, easeInOut } from "use-split-view"
+```
+
+Predefined `EasingFunction` values that pair with `AnimationOptions.easing`. You can also supply any custom `(t: number) => number` function.
+
+## Importing
+
+```ts
+// Main hook
+import { useSplitView } from "use-split-view"
+
+// Hook types
+import type {
+  UseSplitViewOptions,
+  UseSplitViewReturn,
+  SplitViewDirection,
+  SplitPaneState,
+} from "use-split-view"
+
+// Re-exported view-state types
+import type { ViewState, AnimationOptions, EasingFunction } from "use-split-view"
+
+// Re-exported underlying hook
+import { useZoomPinch } from "use-split-view"
+import type { UseZoomPinchOptions, UseZoomPinchReturn } from "use-split-view"
+```

@@ -1,0 +1,87 @@
+---
+title: Animated Transitions
+description: Smoothly animate zoom and pan changes using the AnimationOptions passthrough from use-zoom-pinch.
+---
+
+import { Aside } from "@astrojs/starlight/components"
+
+Starting with `use-split-view@0.2.0`, `setView` accepts an optional second argument `AnimationOptions` — forwarded directly from the underlying [use-zoom-pinch](https://nemezzizz.github.io/use-zoom-pinch/guides/animated-transitions/) hook. You can use this to animate programmatic view changes (reset, center, fit to detail) instead of snapping.
+
+## Animated reset
+
+```tsx
+const { setView } = useSplitView()
+
+const resetAnimated = () => {
+  setView({ x: 0, y: 0, zoom: 1 }, { animate: true, duration: 400 })
+}
+
+<button onClick={resetAnimated}>Reset (smooth)</button>
+```
+
+## Fly to a region
+
+```tsx
+const flyToTopLeft = () => {
+  setView({ x: -400, y: -200, zoom: 2 }, { animate: true, duration: 600 })
+}
+```
+
+## Easing
+
+Easing helpers are re-exported from `use-split-view` for convenience:
+
+```tsx
+import { useSplitView, easeInOut, easeOut, linear } from "use-split-view"
+
+const { setView } = useSplitView()
+
+setView(
+  { x: 0, y: 0, zoom: 1 },
+  { animate: true, duration: 500, easing: easeInOut },
+)
+```
+
+Pass any custom `(t: number) => number` function if you want your own curve.
+
+## `AnimationOptions`
+
+```ts
+interface AnimationOptions {
+  animate?: boolean        // enable animation, default false
+  duration?: number        // milliseconds, default 300
+  easing?: (t: number) => number  // default easeOut
+}
+```
+
+## Chaining with `centerZoom`
+
+<Aside type="note">
+  `centerZoom` in `useSplitView` wraps `useZoomPinch`'s `centerZoom`, which also accepts
+  `AnimationOptions` upstream — but `useSplitView`'s current return type exposes the simpler
+  `(targetZoom: number) => void` signature. For animated zoom, call `setView` directly with the
+  computed target.
+</Aside>
+
+A manual animated zoom-to-center helper:
+
+```tsx
+const { view, setView, containerSize } = useSplitView()
+
+const animatedCenterZoom = (targetZoom: number) => {
+  const { w, h } = containerSize
+  const newZoom = Math.max(0.1, Math.min(targetZoom, 50))
+  setView(
+    {
+      zoom: newZoom,
+      x: view.x - (newZoom - view.zoom) * (w / 2),
+      y: view.y - (newZoom - view.zoom) * (h / 2),
+    },
+    { animate: true, duration: 250 },
+  )
+}
+```
+
+## When not to animate
+
+Avoid animating view changes that happen **while gestures are active** — e.g. inside `onViewStateChange`. Animations are for discrete jumps like reset, "fit to selection", or navigation between predefined views. Continuous interaction should stay synchronous so it feels tactile.

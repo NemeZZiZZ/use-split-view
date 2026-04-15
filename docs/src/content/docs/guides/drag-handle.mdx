@@ -1,0 +1,184 @@
+---
+title: The Drag Handle
+description: Customize the split handle while letting useSplitView manage pointer capture, zoom locking, and touch events.
+---
+
+import { Aside } from "@astrojs/starlight/components"
+
+The drag handle is the only interactive element you control directly. `useSplitView` doesn't render it — it just gives you a bundle of event handlers via `handleProps` that you spread onto whatever element you build.
+
+## What `handleProps` does
+
+`handleProps` contains six event handlers:
+
+```ts
+{
+  onPointerDown:   (e: React.PointerEvent) => void
+  onPointerMove:   (e: React.PointerEvent) => void
+  onPointerUp:     (e: React.PointerEvent) => void
+  onPointerCancel: (e: React.PointerEvent) => void
+  onMouseEnter:    () => void
+  onMouseLeave:    () => void
+}
+```
+
+When you spread them onto an element, you get:
+
+- **Pointer capture** — the handle tracks the cursor even when it leaves the element, so fast drags don't lose sync
+- **Automatic zoom/pan lock** on `pointerdown` — wheel and pinch gestures are suspended during the drag to prevent conflicts
+- **Hover lock** via `onMouseEnter` / `onMouseLeave` — zoom/pan lock while the cursor is idle over the handle, even before a drag starts
+- **Correct `split` updates** based on pointer position in the container, clamped to `[0, 100]`
+- **Touch-safe** — pointer events handle both mouse and touch uniformly, and `stopPropagation` prevents pan-under-handle
+
+## Minimal handle
+
+A plain 2-pixel vertical line is enough:
+
+```tsx
+<div
+  {...handleProps}
+  style={{
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: `${split}%`,
+    width: 24,                    // wider hit area
+    transform: "translateX(-50%)",
+    cursor: "col-resize",
+    zIndex: 10,
+  }}
+>
+  <div
+    style={{
+      width: 2,
+      height: "100%",
+      margin: "0 auto",
+      backgroundColor: "white",
+      boxShadow: "0 0 4px rgba(0,0,0,0.5)",
+    }}
+  />
+</div>
+```
+
+<Aside type="tip">
+  Give the handle a generous hit area (`width: 24` or more) but a thin visual line. The wider
+  wrapper captures the drag; the inner child draws the line.
+</Aside>
+
+## Handle with a grip circle
+
+```tsx
+<div
+  {...handleProps}
+  style={{
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: `${split}%`,
+    width: 32,
+    transform: "translateX(-50%)",
+    cursor: "col-resize",
+    zIndex: 10,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  }}
+>
+  <div
+    style={{
+      position: "absolute",
+      top: 0,
+      bottom: 0,
+      width: 2,
+      background: "white",
+      boxShadow: "0 0 8px rgba(0,0,0,0.5)",
+    }}
+  />
+  <div
+    style={{
+      width: 32,
+      height: 32,
+      borderRadius: "50%",
+      background: "white",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 14,
+    }}
+  >
+    ⇔
+  </div>
+</div>
+```
+
+## Vertical direction
+
+Same idea, rotated:
+
+```tsx
+<div
+  {...handleProps}
+  style={{
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: `${split}%`,
+    height: 24,
+    transform: "translateY(-50%)",
+    cursor: "row-resize",
+    zIndex: 10,
+  }}
+>
+  <div
+    style={{
+      width: "100%",
+      height: 2,
+      background: "white",
+      boxShadow: "0 0 4px rgba(0,0,0,0.5)",
+    }}
+  />
+</div>
+```
+
+## Animating the handle position
+
+`split` is plain state, so you can use CSS transitions on the `left` / `top` property:
+
+```tsx
+<div
+  {...handleProps}
+  style={{
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: `${split}%`,
+    width: 24,
+    transform: "translateX(-50%)",
+    transition: isDraggingRef.current ? "none" : "left 0.3s ease-out",
+    cursor: "col-resize",
+  }}
+/>
+```
+
+<Aside type="caution">
+  Don't animate `left` while the user is actively dragging — it creates a lag. Disable transitions
+  during `onPointerDown` / `onPointerUp` by tracking drag state yourself, or use
+  `splitCSSValue` which is updated synchronously.
+</Aside>
+
+## Programmatically moving the handle
+
+Use `setSplit(value)` from the hook return:
+
+```tsx
+const { setSplit } = useSplitView()
+
+<button onClick={() => setSplit(50)}>Center</button>
+<button onClick={() => setSplit(0)}>Full After</button>
+<button onClick={() => setSplit(100)}>Full Before</button>
+```
+
+## Disabling the handle
+
+To disable split dragging entirely but keep zoom/pan, don't render the handle (or render a non-interactive copy without `handleProps` spread) and use `setSplit` to control the split programmatically. The view state comes from the panes themselves — dragging inside a pane still pans and zooms as usual.

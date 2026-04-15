@@ -1,0 +1,126 @@
+---
+title: Anatomy of a Split View
+description: Understand the three-layer structure used by useSplitView and why each layer exists.
+---
+
+import { Aside } from "@astrojs/starlight/components"
+
+`useSplitView` doesn't render anything itself. Instead, it hands you the state and transforms needed to build a layered structure in your own JSX. Understanding that structure is the key to customizing everything.
+
+## The three layers per pane
+
+Each pane (`"start"` and `"end"`) is built from three stacked layers:
+
+```
+Container (containerRef)
+└── Pane wrapper               ← clip layer     (clipPath from getPaneState)
+    └── Transform layer        ← zoom/pan      (transform from getPaneState)
+        └── Content layer      ← natural size  (contentStyle from getPaneState)
+            └── Your content (image, video, SVG, …)
+```
+
+Both panes share the **same** transform layer math, so zoom and pan stay synchronized. The only thing that differs between them is the `clipPath` — it controls which half of the pane is visible.
+
+## Getting the state
+
+```tsx
+const { getPaneState } = useSplitView()
+
+const start = getPaneState("start")
+const end = getPaneState("end")
+```
+
+`getPaneState` returns a `SplitPaneState` object:
+
+```ts
+interface SplitPaneState {
+  clipPath: string       // e.g. "inset(0 calc(100% - 50%) 0 0)"
+  transform: string      // e.g. "translate(12px, 4px) scale(1.5)"
+  contentStyle: CSSProperties // e.g. { width: 1600, height: 1000 }
+}
+```
+
+## Layer 1 — Clip layer
+
+The clip layer is an absolutely positioned box that fills the container. Its only job is to reveal the portion of the pane that belongs to this side of the split.
+
+```tsx
+<div style={{ position: "absolute", inset: 0, clipPath: start.clipPath }}>
+  {/* transform layer goes here */}
+</div>
+```
+
+<Aside type="note">
+  The `clipPath` uses `inset()` — one of the few CSS clipping values that animates on the GPU and
+  respects border-radius and other visual styles applied to inner layers.
+</Aside>
+
+## Layer 2 — Transform layer
+
+The transform layer applies the synchronized zoom/pan via a CSS `transform`. It must use `transform-origin: top left` to match the math of the underlying hook.
+
+```tsx
+<div
+  style={{
+    width: "100%",
+    height: "100%",
+    transformOrigin: "top left",
+    transform: start.transform,
+  }}
+>
+  {/* content layer goes here */}
+</div>
+```
+
+## Layer 3 — Content layer
+
+The content layer holds the actual image, video, or SVG. Its size comes from `contentStyle` — once you call `setNaturalSize`, this becomes `{ width: displayW, height: displayH }` (the natural size scaled by `fitScale`).
+
+```tsx
+<div style={start.contentStyle}>
+  <img
+    src="/before.jpg"
+    style={{ width: "100%", height: "100%", objectFit: "fill" }}
+    draggable={false}
+    onLoad={(e) => setNaturalSize(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)}
+  />
+</div>
+```
+
+Before `setNaturalSize` is called, `contentStyle` is `{ opacity: 0 }`. This keeps the content invisible until dimensions are known, avoiding a flash of unstyled content.
+
+## Why three layers?
+
+Each layer has one responsibility, which is what makes the headless API composable:
+
+| Layer         | Owns               | Never touches         |
+| ------------- | ------------------ | --------------------- |
+| Clip layer    | Which side shows   | Zoom, pan, size       |
+| Transform     | Zoom/pan animation | Clipping, natural size |
+| Content       | Natural dimensions | Clipping, transform    |
+
+If you need to apply a filter, blur, or mask to one side, apply it to the **clip layer**. If you need to pin a UI element to the panned content (e.g. a marker that scrolls with the image), put it inside the **content layer**. If you need to lock one pane's zoom temporarily, override its transform on the **transform layer**.
+
+## The handle
+
+The drag handle is a sibling of the panes, positioned on top with `zIndex` and `position: absolute`. You choose the visual — the hook supplies `handleProps` with everything needed for correct interaction:
+
+```tsx
+<div
+  {...handleProps}
+  style={{
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: `${split}%`,
+    width: 24,
+    transform: "translateX(-50%)",
+    cursor: "col-resize",
+    zIndex: 10,
+  }}
+>
+  {/* your handle visual */}
+</div>
+```
+
+See [The Drag Handle](/use-split-view/guides/drag-handle/) for the full breakdown of what `handleProps` does.

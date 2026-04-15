@@ -1,0 +1,86 @@
+---
+title: Locking Zoom/Pan
+description: Temporarily suspend zoom and pan while the user interacts with overlays, toolbars, or the drag handle.
+---
+
+import { Aside } from "@astrojs/starlight/components"
+
+Split-view UIs usually have overlays on top of the panes — toolbars, dropdowns, zoom indicators, annotation layers. When the user hovers or clicks these overlays, you don't want their wheel/pinch gestures to pan and zoom the content underneath. That's what **locking** is for.
+
+## Automatic locking
+
+`handleProps` already enables locking while the split handle is being dragged or even just hovered. You don't need to do anything — dragging the handle won't accidentally pan the image, and wheel events over the handle won't zoom.
+
+## Manual locking with `setIsLocked`
+
+For your own overlays, use `setIsLocked(locked)`:
+
+```tsx
+const { setIsLocked } = useSplitView()
+
+<div
+  onMouseEnter={() => setIsLocked(true)}
+  onMouseLeave={() => setIsLocked(false)}
+  style={{ position: "absolute", top: 8, right: 8, zIndex: 20 }}
+>
+  {/* Zoom buttons, info pill, etc. */}
+</div>
+```
+
+When `isLocked` is `true`, the underlying `useZoomPinch` instance is suspended — gestures over the container are ignored until you unlock.
+
+<Aside type="note">
+  Locking suspends zoom/pan, but the split handle keeps working. If you want to lock the handle
+  too, wrap it in your own conditional: `{!isEditing && <div {...handleProps} />}`.
+</Aside>
+
+## Reading the lock state
+
+`isLocked` is exposed so you can style overlays conditionally:
+
+```tsx
+const { isLocked, setIsLocked } = useSplitView()
+
+<div
+  onMouseEnter={() => setIsLocked(true)}
+  onMouseLeave={() => setIsLocked(false)}
+  style={{ outline: isLocked ? "2px solid dodgerblue" : "none" }}
+>
+  ...
+</div>
+```
+
+## Locking during modal interactions
+
+For a modal or popover that should fully freeze the background:
+
+```tsx
+const [isOpen, setOpen] = useState(false)
+const { setIsLocked } = useSplitView()
+
+useEffect(() => {
+  setIsLocked(isOpen)
+}, [isOpen, setIsLocked])
+```
+
+When the modal closes, the split view re-enables gestures automatically.
+
+## Forms and inputs inside the container
+
+If you have an `<input>` or `<textarea>` floating over the split view, lock on focus and unlock on blur:
+
+```tsx
+<input
+  onFocus={() => setIsLocked(true)}
+  onBlur={() => setIsLocked(false)}
+  placeholder="Annotation…"
+/>
+```
+
+This prevents scroll-to-pan from firing while the user is typing (wheel scroll inside text fields becomes unpredictable otherwise).
+
+## Gotchas
+
+- **`setIsLocked(true)` doesn't prevent the handle from moving.** The handle uses its own pointer capture path and isn't affected by the lock — that's usually what you want, but keep it in mind.
+- **Lock state is not saved** in controlled mode. It lives inside the hook itself. If you need to persist "this split view is frozen" across reloads, store your own `frozen` flag and set `enabled`/`isLocked` from it.
+- **Hover locking has a small debounce** built-in via `onMouseEnter` / `onMouseLeave` — it will not fire for pointer-events: none wrappers. Make sure your locking element actually receives mouse events.

@@ -1,0 +1,154 @@
+---
+title: Video Comparison
+description: Compare two video streams side-by-side with synchronized playback, zoom, and pan.
+---
+
+import { Aside } from "@astrojs/starlight/components"
+
+Works the same as image comparison — just swap `<img>` for `<video>` and report natural size from `videoWidth` / `videoHeight`.
+
+```tsx
+import { useRef } from "react"
+import { useSplitView } from "use-split-view"
+
+export function VideoCompare() {
+  const { containerRef, getPaneState, handleProps, setNaturalSize, split } = useSplitView()
+
+  const start = getPaneState("start")
+  const end = getPaneState("end")
+
+  const leftRef = useRef<HTMLVideoElement>(null)
+  const rightRef = useRef<HTMLVideoElement>(null)
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: 500,
+        overflow: "hidden",
+        touchAction: "none",
+        userSelect: "none",
+      }}
+    >
+      <div style={{ position: "absolute", inset: 0, clipPath: start.clipPath }}>
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            transformOrigin: "top left",
+            transform: start.transform,
+          }}
+        >
+          <div style={start.contentStyle}>
+            <video
+              ref={leftRef}
+              src="/clips/a.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              draggable={false}
+              style={{ width: "100%", height: "100%", objectFit: "fill" }}
+              onLoadedData={(e) => {
+                const v = e.currentTarget
+                setNaturalSize(v.videoWidth, v.videoHeight)
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ position: "absolute", inset: 0, clipPath: end.clipPath }}>
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            transformOrigin: "top left",
+            transform: end.transform,
+          }}
+        >
+          <div style={end.contentStyle}>
+            <video
+              ref={rightRef}
+              src="/clips/b.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              draggable={false}
+              style={{ width: "100%", height: "100%", objectFit: "fill" }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div
+        {...handleProps}
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: `${split}%`,
+          width: 24,
+          transform: "translateX(-50%)",
+          cursor: "col-resize",
+          zIndex: 10,
+        }}
+      >
+        <div style={{ width: 2, height: "100%", margin: "0 auto", background: "#fff" }} />
+      </div>
+    </div>
+  )
+}
+```
+
+## Synchronizing playback
+
+Unlike images, videos need their **playback** synchronized, not just their transform. A simple approach — keep both elements refs and sync `currentTime` on `timeupdate`:
+
+```tsx
+useEffect(() => {
+  const a = leftRef.current
+  const b = rightRef.current
+  if (!a || !b) return
+  const sync = () => {
+    if (Math.abs(a.currentTime - b.currentTime) > 0.05) b.currentTime = a.currentTime
+  }
+  a.addEventListener("timeupdate", sync)
+  return () => a.removeEventListener("timeupdate", sync)
+}, [])
+```
+
+For frame-accurate sync, use `requestVideoFrameCallback` (supported in Chrome/Safari) on one video and seek the other.
+
+## Pause / play button
+
+Add a shared control that operates on both refs:
+
+```tsx
+const [playing, setPlaying] = useState(true)
+
+const toggle = () => {
+  const a = leftRef.current
+  const b = rightRef.current
+  if (!a || !b) return
+  if (playing) {
+    a.pause()
+    b.pause()
+  } else {
+    a.play()
+    b.play()
+  }
+  setPlaying((p) => !p)
+}
+
+<button onClick={toggle}>{playing ? "Pause" : "Play"}</button>
+```
+
+<Aside type="tip">
+  Lock zoom/pan while hovering the play control by wrapping it in a `<div onMouseEnter={() =>
+  setIsLocked(true)} onMouseLeave={() => setIsLocked(false)}>` — see
+  [Locking Zoom/Pan](/use-split-view/guides/locking/).
+</Aside>

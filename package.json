@@ -1,6 +1,6 @@
 {
   "name": "use-split-view",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Headless React hook for split-view side-by-side comparison with zoom/pan/pinch support",
   "author": "nemezzizz",
   "license": "MIT",
@@ -47,7 +47,7 @@
     "prepublishOnly": "npm run typecheck && npm run lint && npm run build"
   },
   "dependencies": {
-    "use-zoom-pinch": "^0.1.0"
+    "use-zoom-pinch": "^0.3.0"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

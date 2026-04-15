@@ -1,0 +1,112 @@
+---
+title: Natural Size & Fit
+description: Tell useSplitView your content's real dimensions so it can fit-to-container and compensate zoom on resize.
+---
+
+import { Aside } from "@astrojs/starlight/components"
+
+`useSplitView` is size-aware: once you tell it the **natural dimensions** of your content, it computes a `fitScale` that lets the content fill the container without exceeding its native resolution, and automatically keeps zoom visually stable when the dimensions change.
+
+## Why natural size matters
+
+Think of an image comparison: your container is `800×500`, but the image is `3200×2000`. You want:
+
+- The image to render at the largest size that fits inside the container without overflow
+- Any user zoom to be relative to that fitted size (so 100% = "fits the container")
+- When the user loads a different image with different dimensions, zoom not to visibly "jump"
+
+`setNaturalSize` powers all of this.
+
+## Reporting dimensions
+
+Call `setNaturalSize(width, height)` whenever you know the content's natural size — typically inside an `onLoad` / `onLoadedData` handler:
+
+```tsx
+const { setNaturalSize } = useSplitView()
+
+<img
+  src="/photo.jpg"
+  onLoad={(e) => {
+    const { naturalWidth, naturalHeight } = e.currentTarget
+    setNaturalSize(naturalWidth, naturalHeight)
+  }}
+/>
+```
+
+For video:
+
+```tsx
+<video
+  src="/clip.mp4"
+  autoPlay muted loop playsInline
+  onLoadedData={(e) => {
+    const { videoWidth, videoHeight } = e.currentTarget
+    setNaturalSize(videoWidth, videoHeight)
+  }}
+/>
+```
+
+For SVG or canvas where you already know the viewBox / dimensions, call it in a `useEffect`:
+
+```tsx
+useEffect(() => {
+  setNaturalSize(1600, 900)
+}, [setNaturalSize])
+```
+
+<Aside type="tip">
+  `setNaturalSize` is memoized — calling it with the same width/height as the current state is a
+  no-op, so it's safe to call unconditionally inside `onLoad`.
+</Aside>
+
+## Reading the derived values
+
+Once natural size is set, the hook exposes three read-only derivatives:
+
+| Value          | Type               | Meaning                                          |
+| -------------- | ------------------ | ------------------------------------------------ |
+| `naturalSize`  | `{ w, h } \| null` | What you passed to `setNaturalSize`              |
+| `fitScale`     | `number`           | `min(containerW / w, containerH / h, 1)`         |
+| `displaySize`  | `{ w, h }`         | `naturalSize * fitScale` — actual rendered size  |
+| `displayZoomPct` | `number`         | `round(view.zoom * fitScale * 100)` — user-facing percentage |
+
+```tsx
+const { displayZoomPct } = useSplitView()
+return <div>Zoom: {displayZoomPct}%</div>
+```
+
+The `contentStyle` returned by `getPaneState(...)` is already `{ width: displaySize.w, height: displaySize.h }` — you don't need to compute anything yourself.
+
+## Zoom compensation on size change
+
+If the user is zoomed in on an image and you swap it for a higher-resolution version, the **visible pixel area** should stay roughly the same. Without compensation, the zoomed-in crop would shift or scale unexpectedly.
+
+`setNaturalSize` handles this automatically: when the new dimensions produce a different `fitScale`, the hook recomputes `zoom`, `x`, and `y` so the visual output stays continuous.
+
+```tsx
+// Low-res placeholder loads first
+setNaturalSize(400, 250)
+
+// User zooms in to 3× on a detail
+// Later, high-res upgrade arrives
+setNaturalSize(4000, 2500)
+// ✓ The detail remains centered and the apparent zoom level is preserved
+```
+
+## Before natural size is reported
+
+Before `setNaturalSize` is called, `contentStyle` is `{ opacity: 0 }` — the layer is rendered but invisible. This avoids a flash of wrongly-sized content and keeps the DOM structure stable.
+
+Once a valid size is reported, `contentStyle` switches to explicit `width` / `height`, and any transforms or clipping start working immediately.
+
+## Opting out of fit-to-container
+
+If you want the content to render at its full natural size regardless of container dimensions (i.e. you want overflow + pan to be the primary way users navigate), just don't call `setNaturalSize` and instead set the content layer dimensions manually:
+
+```tsx
+<div style={{ ...start.contentStyle, width: 4000, height: 2500 }}>
+  <img src="/huge.jpg" style={{ width: "100%", height: "100%" }} />
+</div>
+```
+
+Since `contentStyle` returns `{ opacity: 0 }` in this mode, use a spread override or ignore it and use your own style object.

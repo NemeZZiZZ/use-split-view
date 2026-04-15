@@ -1,0 +1,145 @@
+---
+title: Before/After Maps
+description: Compare two map layers — satellite vs street, historical vs present — with a draggable splitter.
+---
+
+Maps are a great fit for `useSplitView` because both layers already share a coordinate system. You just need to render two `<canvas>`, `<img>`, or SVG layers into the two panes and sync any additional map state externally.
+
+## Tile-based maps
+
+Here's a static-tile example. Replace the `<img>` tags with your map component of choice (MapLibre, Leaflet, OpenLayers, Mapbox GL) — the split-view just clips them.
+
+```tsx
+import { useSplitView } from "use-split-view"
+
+export function MapCompare() {
+  const { containerRef, getPaneState, handleProps, setNaturalSize, split, displayZoomPct } =
+    useSplitView({ direction: "horizontal", initialSplit: 50 })
+
+  const start = getPaneState("start")
+  const end = getPaneState("end")
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: 600,
+        overflow: "hidden",
+        touchAction: "none",
+        userSelect: "none",
+      }}
+    >
+      {/* Satellite (left) */}
+      <div style={{ position: "absolute", inset: 0, clipPath: start.clipPath }}>
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            transformOrigin: "top left",
+            transform: start.transform,
+          }}
+        >
+          <div style={start.contentStyle}>
+            <img
+              src="/maps/satellite-2024.jpg"
+              alt="2024"
+              style={{ width: "100%", height: "100%", objectFit: "fill" }}
+              onLoad={(e) =>
+                setNaturalSize(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
+              }
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Historical (right) */}
+      <div style={{ position: "absolute", inset: 0, clipPath: end.clipPath }}>
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            transformOrigin: "top left",
+            transform: end.transform,
+          }}
+        >
+          <div style={end.contentStyle}>
+            <img
+              src="/maps/satellite-1984.jpg"
+              alt="1984"
+              style={{ width: "100%", height: "100%", objectFit: "fill" }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div
+        {...handleProps}
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: `${split}%`,
+          width: 28,
+          transform: "translateX(-50%)",
+          cursor: "col-resize",
+          zIndex: 10,
+        }}
+      >
+        <div style={{ width: 3, height: "100%", margin: "0 auto", background: "#fff", boxShadow: "0 0 6px rgba(0,0,0,0.6)" }} />
+      </div>
+
+      {/* Year badges */}
+      <div style={{ ...badge, left: 12 }}>2024</div>
+      <div style={{ ...badge, right: 12 }}>1984</div>
+
+      {/* Zoom pill */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 12,
+          right: 12,
+          padding: "6px 10px",
+          borderRadius: 999,
+          background: "rgba(0,0,0,0.5)",
+          color: "#fff",
+          fontFamily: "ui-monospace, monospace",
+          fontSize: 12,
+        }}
+      >
+        {displayZoomPct}%
+      </div>
+    </div>
+  )
+}
+
+const badge: React.CSSProperties = {
+  position: "absolute",
+  top: 12,
+  padding: "4px 10px",
+  borderRadius: 6,
+  background: "rgba(0,0,0,0.6)",
+  color: "#fff",
+  fontFamily: "system-ui, sans-serif",
+  fontSize: 12,
+  fontWeight: 600,
+  pointerEvents: "none",
+}
+```
+
+## Integrating with a live map library
+
+For interactive map libraries you'll want to:
+
+1. Replace the `<img>` with a map-library container (e.g. MapLibre's `<div>` that you `new maplibregl.Map({...})` into).
+2. **Disable the map's own gesture handling** — use `interactive: false` on MapLibre/Mapbox or `dragging: false, scrollWheelZoom: false` on Leaflet — and let `useSplitView` drive view state via `view.x`, `view.y`, `view.zoom`.
+3. On every `view` change, call the map's `jumpTo` / `setView` with the equivalent lat/lng + zoom. You'll need to convert pixel-space `view.x/y/zoom` into the map's coordinate system.
+4. Use **controlled mode** (`viewState` + `onViewStateChange`) so you can intercept updates and synchronize both maps through your own React state.
+
+The conversion math depends on your tile grid and projection; the key idea is that `useSplitView` becomes the single source of truth for camera position, while each map library just renders its layer at the requested position.
+
+## Alternative: two independent maps
+
+If you'd rather let each map library handle its own gestures, you can use `useSplitView` **purely for the split handle** by not attaching pan/zoom to the container. Render each map in its respective pane (`clipPath` still clips correctly) and ignore `view` / `getPaneState(...).transform`. The handle still works via `handleProps`. This is the simplest integration path but sacrifices synchronized zoom.

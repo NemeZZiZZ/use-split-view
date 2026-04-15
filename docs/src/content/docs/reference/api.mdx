@@ -1,0 +1,169 @@
+---
+title: API Reference
+description: Complete reference for useSplitView options and return values.
+---
+
+## `useSplitView(options?)`
+
+The main hook. Returns everything you need to build a split-view UI — refs, transforms, clip-paths, handle event bundles, and imperative controls.
+
+```tsx
+import { useSplitView } from "use-split-view"
+
+const sv = useSplitView({
+  direction: "horizontal",
+  initialSplit: 50,
+})
+```
+
+All options are optional. Pass `{}` or nothing to get the defaults.
+
+---
+
+## Options
+
+### Layout
+
+| Option         | Type                         | Default        | Description                                       |
+| -------------- | ---------------------------- | -------------- | ------------------------------------------------- |
+| `direction`    | `"horizontal" \| "vertical"` | `"horizontal"` | Split orientation. Flips clip-path and handle math |
+| `initialSplit` | `number`                     | `50`           | Initial split position as a percentage (0–100)    |
+
+### Zoom/Pan
+
+| Option      | Type     | Default | Description                                  |
+| ----------- | -------- | ------- | -------------------------------------------- |
+| `minScale`  | `number` | `0.1`   | Minimum allowed zoom level                   |
+| `maxScale`  | `number` | `50`    | Maximum allowed zoom level                   |
+| `panSpeed`  | `number` | `1`     | Multiplier for pan speed (mouse wheel only)  |
+| `zoomSpeed` | `number` | `1`     | Multiplier for zoom speed (mouse wheel only) |
+
+### Controlled mode
+
+| Option              | Type                        | Default | Description                                                                 |
+| ------------------- | --------------------------- | ------- | --------------------------------------------------------------------------- |
+| `viewState`         | `ViewState`                 | —       | Controlled view state. When provided, the hook becomes controlled           |
+| `onViewStateChange` | `(view: ViewState) => void` | —       | Callback on every view change. Required when `viewState` is provided        |
+
+See [Controlled View State](/use-split-view/guides/controlled-mode/) for patterns.
+
+---
+
+## Return value
+
+`useSplitView` returns a single object (`UseSplitViewReturn`).
+
+### Container
+
+| Property       | Type                                 | Description                             |
+| -------------- | ------------------------------------ | --------------------------------------- |
+| `containerRef` | `RefObject<HTMLDivElement \| null>`  | Attach to your container element        |
+| `containerSize` | `{ w: number; h: number }`          | Container dimensions tracked via `ResizeObserver` |
+
+### Split state
+
+| Property         | Type                         | Description                                |
+| ---------------- | ---------------------------- | ------------------------------------------ |
+| `split`          | `number`                     | Current split position (0–100)             |
+| `setSplit`       | `(value: number) => void`    | Set the split position programmatically    |
+| `direction`      | `SplitViewDirection`         | Current direction (echoed from options)    |
+| `splitCSSValue`  | `string`                     | Convenience string like `"50%"`            |
+
+### View state
+
+| Property          | Type                            | Description                                   |
+| ----------------- | ------------------------------- | --------------------------------------------- |
+| `view`            | `ViewState`                     | Current `{ x, y, zoom }`                      |
+| `setView`         | `(v: ViewState, opts?: AnimationOptions) => void` | Set view directly, optionally animated       |
+| `centerZoom`      | `(targetZoom: number) => void`  | Zoom to target keeping container center fixed |
+| `resetView`       | `() => void`                    | Reset to `{ x: 0, y: 0, zoom: 1 }`            |
+| `isLocked`        | `boolean`                       | Whether zoom/pan is currently locked          |
+| `setIsLocked`     | `(locked: boolean) => void`     | Manually lock or unlock gestures              |
+
+### Content sizing
+
+| Property          | Type                                      | Description                                          |
+| ----------------- | ----------------------------------------- | ---------------------------------------------------- |
+| `naturalSize`     | `{ w: number; h: number } \| null`        | Content's natural dimensions (or `null` before set)  |
+| `setNaturalSize`  | `(w: number, h: number) => void`          | Report content dimensions; call once on load         |
+| `fitScale`        | `number`                                  | Scale factor to fit content into container           |
+| `displaySize`     | `{ w: number; h: number }`                | Rendered dimensions (`naturalSize * fitScale`)       |
+| `displayZoomPct`  | `number`                                  | User-facing zoom percentage (integer)                |
+
+### Pane & handle
+
+| Property        | Type                                            | Description                                  |
+| --------------- | ----------------------------------------------- | -------------------------------------------- |
+| `getPaneState`  | `(part: "start" \| "end") => SplitPaneState`    | Returns clip-path, transform, and content style for one pane |
+| `handleProps`   | `HandleProps`                                   | Spread on your drag handle element           |
+
+---
+
+## `SplitPaneState`
+
+Returned by `getPaneState("start" | "end")`:
+
+```ts
+interface SplitPaneState {
+  clipPath: string          // CSS clip-path, e.g. "inset(0 calc(100% - 50%) 0 0)"
+  transform: string         // CSS transform, e.g. "translate(12px, 4px) scale(1.5)"
+  contentStyle: CSSProperties // Width/height for the content layer
+}
+```
+
+Before `setNaturalSize` is called, `contentStyle` is `{ opacity: 0 }`. After it's called, it becomes `{ width: displaySize.w, height: displaySize.h }`.
+
+---
+
+## `handleProps`
+
+```ts
+interface HandleProps {
+  onPointerDown:   (e: React.PointerEvent) => void
+  onPointerMove:   (e: React.PointerEvent) => void
+  onPointerUp:     (e: React.PointerEvent) => void
+  onPointerCancel: (e: React.PointerEvent) => void
+  onMouseEnter:    () => void
+  onMouseLeave:    () => void
+}
+```
+
+These are ready to spread:
+
+```tsx
+<div {...handleProps} style={...}>...</div>
+```
+
+They implement pointer capture, split update math, zoom/pan locking on drag, and hover-locking. See [The Drag Handle](/use-split-view/guides/drag-handle/) for a deep dive.
+
+---
+
+## Re-exports
+
+Everything from [use-zoom-pinch](https://nemezzizz.github.io/use-zoom-pinch/) is re-exported for convenience:
+
+```ts
+import {
+  useZoomPinch,
+  easeInOut,
+  easeOut,
+  linear,
+  type ViewState,
+  type AnimationOptions,
+  type BoundsOptions,
+  type GesturesOptions,
+  type InertiaOptions,
+  type DoubleTapOptions,
+  type RotationOptions,
+  type KeyboardOptions,
+  type CursorOptions,
+  type ActivationKeyOptions,
+  type SnapToGridOptions,
+  type ZoomSnapLevel,
+  type EasingFunction,
+  type UseZoomPinchOptions,
+  type UseZoomPinchReturn,
+} from "use-split-view"
+```
+
+This lets you build custom overlays or secondary hooks (e.g. a minimap) without adding `use-zoom-pinch` as a separate dependency.

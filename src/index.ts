@@ -6,5 +6,27 @@ export type {
   SplitPaneState,
 } from "./use-split-view"
 
-export type { ViewState, UseZoomPinchOptions, UseZoomPinchReturn } from "use-zoom-pinch"
-export { useZoomPinch } from "use-zoom-pinch"
+export {
+  useZoomPinch,
+  easeInOut,
+  easeOut,
+  linear,
+} from "use-zoom-pinch"
+
+export type {
+  ViewState,
+  UseZoomPinchOptions,
+  UseZoomPinchReturn,
+  AnimationOptions,
+  EasingFunction,
+  BoundsOptions,
+  GesturesOptions,
+  InertiaOptions,
+  DoubleTapOptions,
+  RotationOptions,
+  KeyboardOptions,
+  CursorOptions,
+  ActivationKeyOptions,
+  SnapToGridOptions,
+  ZoomSnapLevel,
+} from "use-zoom-pinch"

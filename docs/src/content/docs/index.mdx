@@ -1,0 +1,120 @@
+---
+title: useSplitView
+description: Headless React hook for split-view side-by-side comparison with synchronized zoom, pan, and pinch.
+template: splash
+hero:
+  tagline: Headless React hook for building side-by-side comparison UIs with synchronized zoom, pan, and pinch. Zero styling opinions — you bring the markup.
+  actions:
+    - text: Get Started
+      link: /use-split-view/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/NemeZZiZZ/use-split-view
+      icon: external
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components"
+import SplitViewDemo from "../../components/SplitViewDemo.tsx"
+
+## Try it
+
+<SplitViewDemo client:only="react" />
+
+Drag the handle to change the split, scroll to pan, ctrl/⌘ + scroll to zoom, pinch on a trackpad, or click the buttons above.
+
+## Why useSplitView?
+
+<CardGrid>
+  <Card title="Headless by design" icon="puzzle">
+    No DOM output, no CSS dependencies. Style the split, handle, and content any way you want.
+  </Card>
+  <Card title="Synchronized zoom/pan" icon="approve-check">
+    Both panes share the same `view` state through
+    [use-zoom-pinch](https://nemezzizz.github.io/use-zoom-pinch/) — pan and zoom stay in lockstep.
+  </Card>
+  <Card title="Horizontal & vertical" icon="bars">
+    Swap between top/bottom and left/right splits with a single prop.
+  </Card>
+  <Card title="Fit to container" icon="setting">
+    Report the content's natural size once — the hook computes `fitScale` and compensates zoom on
+    resize.
+  </Card>
+</CardGrid>
+
+## Quick look
+
+```tsx
+import { useSplitView } from "use-split-view"
+
+function Comparison() {
+  const { containerRef, getPaneState, handleProps, setNaturalSize, split } = useSplitView()
+
+  const start = getPaneState("start")
+  const end = getPaneState("end")
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: 500,
+        overflow: "hidden",
+        touchAction: "none",
+        userSelect: "none",
+      }}
+    >
+      <div style={{ position: "absolute", inset: 0, clipPath: start.clipPath }}>
+        <div style={{ width: "100%", height: "100%", transformOrigin: "top left", transform: start.transform }}>
+          <div style={start.contentStyle}>
+            <img
+              src="/before.jpg"
+              style={{ width: "100%", height: "100%", objectFit: "fill" }}
+              draggable={false}
+              onLoad={(e) => setNaturalSize(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ position: "absolute", inset: 0, clipPath: end.clipPath }}>
+        <div style={{ width: "100%", height: "100%", transformOrigin: "top left", transform: end.transform }}>
+          <div style={end.contentStyle}>
+            <img
+              src="/after.jpg"
+              style={{ width: "100%", height: "100%", objectFit: "fill" }}
+              draggable={false}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div
+        {...handleProps}
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: `${split}%`,
+          width: 24,
+          transform: "translateX(-50%)",
+          cursor: "col-resize",
+        }}
+      >
+        <div style={{ width: 2, height: "100%", margin: "0 auto", background: "white", boxShadow: "0 0 4px rgba(0,0,0,0.5)" }} />
+      </div>
+    </div>
+  )
+}
+```
+
+## What you get
+
+- **`containerRef`** — attach to the outer element that owns the split.
+- **`getPaneState("start" | "end")`** — returns `clipPath`, `transform`, and `contentStyle` for one side.
+- **`handleProps`** — spread on your custom drag handle (pointer capture, zoom lock, all included).
+- **Zoom/pan state** — `view`, `setView`, `centerZoom`, `resetView`, `displayZoomPct`.
+- **Fit-to-container** — `setNaturalSize`, `fitScale`, `displaySize` for seamless content sizing.
+
+Next: head to [Getting Started](/use-split-view/getting-started/) for a step-by-step walkthrough.

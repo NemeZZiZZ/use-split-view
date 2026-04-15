@@ -1,0 +1,117 @@
+---
+title: Controlled View State
+description: Sync zoom and pan with React state using controlled mode.
+---
+
+import { Aside } from "@astrojs/starlight/components"
+
+`useSplitView` mirrors the controlled/uncontrolled pattern from [use-zoom-pinch](https://nemezzizz.github.io/use-zoom-pinch/guides/controlled-mode/). In **uncontrolled** mode, the hook manages zoom/pan internally; in **controlled** mode, you own the state and pass it in via `viewState` + `onViewStateChange`.
+
+## Uncontrolled (default)
+
+```tsx
+const { view, setView, resetView } = useSplitView()
+// view is read-only, updated by gestures and imperative methods
+```
+
+This is the simplest setup. `view` updates as the user pans and zooms, and you can call `setView`, `centerZoom`, or `resetView` to change it.
+
+## Controlled
+
+Lift `view` into React state and pass it through:
+
+```tsx
+import { useRef, useState } from "react"
+import { useSplitView, type ViewState } from "use-split-view"
+
+function Controlled() {
+  const [view, setView] = useState<ViewState>({ x: 0, y: 0, zoom: 1 })
+
+  const sv = useSplitView({
+    viewState: view,
+    onViewStateChange: setView,
+  })
+
+  // ...render panes with sv.getPaneState(...)
+}
+```
+
+<Aside type="caution">
+  In controlled mode, the hook **never** updates its own view — if you don't call `setView` inside
+  `onViewStateChange`, gestures will appear to do nothing.
+</Aside>
+
+## Why controlled mode?
+
+### Persist and restore
+
+Save the view to `localStorage`, URL params, or a database:
+
+```tsx
+const [view, setView] = useState<ViewState>(() => {
+  const saved = localStorage.getItem("splitView")
+  return saved ? JSON.parse(saved) : { x: 0, y: 0, zoom: 1 }
+})
+
+const handleChange = (v: ViewState) => {
+  setView(v)
+  localStorage.setItem("splitView", JSON.stringify(v))
+}
+
+useSplitView({ viewState: view, onViewStateChange: handleChange })
+```
+
+### Sync multiple split views
+
+Two independent split-view instances that share zoom/pan — useful when comparing the same scene at different crops or with different filters:
+
+```tsx
+const [view, setView] = useState<ViewState>({ x: 0, y: 0, zoom: 1 })
+
+const svLeft = useSplitView({ viewState: view, onViewStateChange: setView })
+const svRight = useSplitView({ viewState: view, onViewStateChange: setView })
+```
+
+Both instances will zoom and pan in lockstep.
+
+### Constrain or transform updates
+
+Intercept the new state before committing it:
+
+```tsx
+const handleChange = (v: ViewState) => {
+  // Clamp zoom to 25% increments
+  const snappedZoom = Math.round(v.zoom * 4) / 4
+  setView({ ...v, zoom: snappedZoom })
+}
+```
+
+### Mirror state across hooks
+
+Controlled view state is re-usable: pass it into a plain `useZoomPinch` instance somewhere else (e.g. a minimap preview) to mirror the same view without rebuilding the split.
+
+## Imperative methods still work
+
+`setView`, `centerZoom`, and `resetView` work in controlled mode — they call your `onViewStateChange` handler under the hood:
+
+```tsx
+const { setView, centerZoom, resetView } = useSplitView({
+  viewState: view,
+  onViewStateChange: setView,
+})
+
+<button onClick={() => centerZoom(view.zoom * 2)}>Zoom in</button>
+<button onClick={resetView}>Reset</button>
+```
+
+## Reading view in UI
+
+Because `view` is React state, it triggers re-renders — handy for showing zoom/position readouts:
+
+```tsx
+<div style={{ fontFamily: "monospace" }}>
+  x: {view.x.toFixed(0)} · y: {view.y.toFixed(0)} · zoom: {(view.zoom * 100).toFixed(0)}%
+</div>
+```
+
+You can also use `displayZoomPct` from the hook return, which factors in `fitScale` for a user-facing percentage.
