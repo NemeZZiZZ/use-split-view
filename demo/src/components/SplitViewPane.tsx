@@ -17,7 +17,7 @@ export function SplitViewPane({
   return (
     <div className="absolute inset-0" style={{ clipPath: pane.clipPath, zIndex }}>
       <div
-        className="grid h-full w-full origin-top-left place-items-center transition-transform duration-100 ease-in-out"
+        className="grid h-full w-full origin-top-left place-items-center"
         style={{ transform: pane.transform }}
       >
         <div className="relative" style={pane.contentStyle}>

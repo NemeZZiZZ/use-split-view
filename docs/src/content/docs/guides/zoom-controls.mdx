@@ -16,7 +16,7 @@ return (
   <div>
     <button onClick={() => centerZoom(view.zoom * 1.5)}>Zoom In</button>
     <button onClick={() => centerZoom(view.zoom / 1.5)}>Zoom Out</button>
-    <button onClick={resetView}>Reset</button>
+    <button onClick={() => resetView()}>Reset</button>
     <span>{displayZoomPct}%</span>
   </div>
 )
@@ -40,7 +40,7 @@ For a 3200×2000 image inside an 800×500 container, `fitScale ≈ 0.25`. When t
 ## Reset
 
 ```tsx
-<button onClick={resetView}>Reset</button>
+<button onClick={() => resetView()}>Reset</button>
 ```
 
 `resetView()` snaps the view back to `{ x: 0, y: 0, zoom: 1 }`.
@@ -79,16 +79,27 @@ const steps = [0.25, 0.5, 1, 2, 4]
 </select>
 ```
 
-## Using the re-exported `useZoomPinch` API
+## Using `zoomApi` for advanced helpers
 
-The underlying hook (re-exported as `useZoomPinch` from `use-split-view`) offers richer imperative methods. Because `useSplitView` internally calls `useZoomPinch`, any callbacks that mutate state through `setView` are effectively compatible — but if you want, for example, animated zoom or `zoomIn` / `zoomOut` helpers, you can replicate them manually:
+`useSplitView` exposes the advanced imperative helpers of its underlying `useZoomPinch` instance through `zoomApi`. They operate on the **same** container that drives the panes, so you get `zoomIn`, `zoomOut`, `zoomTo`, `panTo`, `panBy`, `fitToRect`, `fitToContent`, `zoomToElement`, `screenToContent`, and more without spinning up a separate instance:
 
 ```tsx
-const zoomInStep = (step = 1.5) => centerZoom(view.zoom * step)
-const zoomOutStep = (step = 1.5) => centerZoom(view.zoom / step)
+const { view, zoomApi } = useSplitView()
+
+<button onClick={() => zoomApi.zoomIn()}>Zoom in</button>
+<button onClick={() => zoomApi.zoomOut()}>Zoom out</button>
+<button onClick={() => zoomApi.panTo(100, 50, { animate: true, duration: 250 })}>Pan to detail</button>
+<button onClick={() => zoomApi.fitToRect({ x: 0, y: 0, width: 400, height: 300 })}>Fit selection</button>
 ```
 
-The re-exported easing functions (`linear`, `easeOut`, `easeInOut`) are available for CSS transitions you might add to the content layer or handle.
+`centerZoom` and `resetView` also accept `AnimationOptions` directly:
+
+```tsx
+centerZoom(view.zoom * 2, { animate: true, duration: 250 })
+resetView({ animate: true })
+```
+
+The re-exported easing functions (`linear`, `easeOut`, `easeInOut`) are available for custom `AnimationOptions.easing`.
 
 ## Keyboard shortcuts
 

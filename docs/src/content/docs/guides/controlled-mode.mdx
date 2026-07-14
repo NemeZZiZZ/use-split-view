@@ -101,7 +101,7 @@ const { setView, centerZoom, resetView } = useSplitView({
 })
 
 <button onClick={() => centerZoom(view.zoom * 2)}>Zoom in</button>
-<button onClick={resetView}>Reset</button>
+<button onClick={() => resetView()}>Reset</button>
 ```
 
 ## Reading view in UI

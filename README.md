@@ -133,7 +133,7 @@ function ImageComparison() {
       </div>
 
       {/* Zoom indicator */}
-      <button onClick={resetView} style={{ position: "absolute", top: 8, right: 8, zIndex: 10 }}>
+      <button onClick={() => resetView()} style={{ position: "absolute", top: 8, right: 8, zIndex: 10 }}>
         {displayZoomPct}%
       </button>
     </div>
@@ -161,30 +161,33 @@ import { useSplitView } from "use-split-view"
 | `zoomSpeed`         | `number`                     | `1`            | Zoom speed multiplier (mouse wheel)    |
 | `viewState`         | `ViewState`                  | —              | Controlled view state `{ x, y, zoom }` |
 | `onViewStateChange` | `(view: ViewState) => void`  | —              | Callback for controlled mode           |
+| `zoom`              | `SplitViewZoomOptions`       | —              | Pass-through options for the underlying `useZoomPinch` (bounds, inertia, keyboard, rotation, double-tap, snap, activation keys, …) |
 
 #### Return Value
 
-| Property         | Type                           | Description                                   |
-| ---------------- | ------------------------------ | --------------------------------------------- |
-| `containerRef`   | `RefObject<HTMLDivElement>`    | Attach to the container element               |
-| `split`          | `number`                       | Current split position (0-100)                |
-| `setSplit`       | `(value: number) => void`      | Set split position programmatically           |
-| `view`           | `ViewState`                    | Current `{ x, y, zoom }`                      |
-| `setView`        | `(v: ViewState) => void`       | Set view state directly                       |
-| `centerZoom`     | `(targetZoom: number) => void` | Zoom keeping center as anchor                 |
-| `resetView`      | `() => void`                   | Reset to `{ x: 0, y: 0, zoom: 1 }`            |
-| `direction`      | `SplitViewDirection`           | Current direction                             |
-| `isLocked`       | `boolean`                      | Whether zoom/pan is locked (handle drag)      |
-| `setIsLocked`    | `(locked: boolean) => void`    | Lock/unlock zoom/pan manually                 |
-| `containerSize`  | `{ w, h }`                     | Container dimensions in pixels                |
-| `naturalSize`    | `{ w, h } \| null`             | Natural content dimensions                    |
-| `setNaturalSize` | `(w, h) => void`               | Set natural dimensions (call on content load) |
-| `fitScale`       | `number`                       | Scale to fit content in container             |
-| `displaySize`    | `{ w, h }`                     | Display dimensions (`naturalSize * fitScale`) |
-| `displayZoomPct` | `number`                       | Zoom as display percentage                    |
-| `getPaneState`   | `(part) => SplitPaneState`     | Get clip/transform/style for a pane           |
-| `handleProps`    | `object`                       | Spread on the drag handle element             |
-| `splitCSSValue`  | `string`                       | CSS value like `"50%"`                        |
+| Property         | Type                                              | Description                                              |
+| ---------------- | ------------------------------------------------- | -------------------------------------------------------- |
+| `containerRef`   | `RefObject<HTMLDivElement \| null>`               | Attach to the container element                          |
+| `split`          | `number`                                          | Current split position (0-100)                           |
+| `setSplit`       | `(value: number) => void`                         | Set split position programmatically                      |
+| `view`           | `ViewState`                                       | Current `{ x, y, zoom }`                                 |
+| `setView`        | `(v: ViewState, options?: AnimationOptions) => void` | Set view state directly, optionally animated         |
+| `centerZoom`     | `(targetZoom: number, options?: AnimationOptions) => void` | Zoom keeping center as anchor, optionally animated |
+| `resetView`      | `(options?: AnimationOptions) => void`            | Reset to `{ x: 0, y: 0, zoom: 1 }`, optionally animated  |
+| `isAnimating`    | `boolean`                                         | Whether an animation is currently running                |
+| `direction`      | `SplitViewDirection`                              | Current direction                                        |
+| `isLocked`       | `boolean`                                         | Whether zoom/pan is locked (handle drag)                 |
+| `setIsLocked`    | `(locked: boolean) => void`                       | Lock/unlock zoom/pan manually                            |
+| `containerSize`  | `{ w, h }`                                        | Container dimensions in pixels                           |
+| `naturalSize`    | `{ w, h } \| null`                                | Natural content dimensions                               |
+| `setNaturalSize` | `(w, h) => void`                                  | Set natural dimensions (call on content load)            |
+| `fitScale`       | `number`                                          | Scale to fit content in container                        |
+| `displaySize`    | `{ w, h }`                                        | Display dimensions (`naturalSize * fitScale`)            |
+| `displayZoomPct` | `number`                                          | Zoom as display percentage                               |
+| `getPaneState`   | `(part) => SplitPaneState`                        | Get clip/transform/style for a pane                      |
+| `handleProps`    | `object`                                          | Spread on the drag handle element                        |
+| `splitCSSValue`  | `string`                                          | CSS value like `"50%"`                                   |
+| `zoomApi`        | `SplitViewZoomApi`                                | Advanced imperative helpers (`zoomIn`, `panTo`, `fitToRect`, `screenToContent`, …) from the underlying instance |
 
 #### `SplitPaneState`
 
@@ -207,16 +210,83 @@ interface ViewState {
   x: number
   y: number
   zoom: number
+  /** Rotation angle in degrees. @default 0 */
+  rotation?: number
 }
 ```
+
+#### `AnimationOptions`
+
+Passed to `setView`, `centerZoom`, and `resetView` to animate programmatic changes:
+
+```ts
+interface AnimationOptions {
+  /** Enable animated transition. @default false */
+  animate?: boolean
+  /** Animation duration in milliseconds. @default 300 */
+  duration?: number
+  /** Easing function. @default easeOut */
+  easing?: EasingFunction
+  /** Skip bounds clamping, axis locking, and snap-to-grid (setView only). @default false */
+  skipConstraints?: boolean
+}
+```
+
+### Pass-through zoom options
+
+The `zoom` option forwards extra config to the underlying `useZoomPinch` instance driving the split panes — so you can enable bounds, inertia, keyboard navigation, rotation, double-tap, snap-to-grid, activation keys, and more without losing the split-view wiring:
+
+```tsx
+const sv = useSplitView({
+  direction: "horizontal",
+  zoom: {
+    bounds: { minX: -500, maxX: 500, minY: -300, maxY: 300, mode: "bounce" },
+    inertia: { enabled: true, friction: 0.9 },
+    keyboard: { enabled: true, panStep: 40 },
+    doubleTap: { enabled: true, mode: "toggle", step: 2 },
+    gestures: { rotate: true },
+  },
+})
+```
+
+For the full list of forwarded fields, see the [`useZoomPinchOptions`](https://nemezzizz.github.io/use-zoom-pinch/) reference. `containerRef`, the scale/speed limits, view-state, and `enabled` are owned by `useSplitView` and cannot be overridden here.
+
+### Advanced imperative helpers (`zoomApi`)
+
+For operations not exposed directly on the return object, use `zoomApi` — it points at the **same** `useZoomPinch` instance that drives the panes:
+
+```tsx
+const { zoomApi } = useSplitView()
+
+<button onClick={() => zoomApi.zoomIn()}>Zoom in</button>
+<button onClick={() => zoomApi.panTo(100, 50, { animate: true })}>Pan</button>
+<button onClick={() => zoomApi.fitToRect({ x: 0, y: 0, width: 400, height: 300 })}>Fit rect</button>
+
+const { x, y } = zoomApi.screenToContent(pointerX, pointerY)
+```
+
+Includes `zoomIn`, `zoomOut`, `zoomTo`, `panTo`, `panBy`, `fitToRect`, `fitToContent`, `zoomToElement`, `rotateTo`, `rotateBy`, `snapZoom`, `screenToContent`, and `contentToScreen`.
 
 ### Re-exports
 
 The package re-exports everything from `use-zoom-pinch` for convenience:
 
 ```ts
-import { useZoomPinch, type UseZoomPinchOptions, type UseZoomPinchReturn } from "use-split-view"
+import {
+  useZoomPinch,
+  // easing + geometry helpers
+  easeInOut,
+  easeOut,
+  linear,
+  clamp,
+  distance,
+  angleBetween,
+  type UseZoomPinchOptions,
+  type UseZoomPinchReturn,
+} from "use-split-view"
 ```
+
+The geometry helpers (`clamp`, `distance`, `angleBetween`) are handy for building measurement overlays, markers, or custom snap logic on top of the split view.
 
 ## Architecture
 
@@ -293,7 +363,7 @@ const sv = useSplitView({
 ```tsx
 <button onClick={() => sv.centerZoom(sv.view.zoom * 2)}>Zoom In</button>
 <button onClick={() => sv.centerZoom(sv.view.zoom / 2)}>Zoom Out</button>
-<button onClick={sv.resetView}>Reset</button>
+<button onClick={() => sv.resetView({ animate: true, duration: 300 })}>Reset</button>
 <span>{sv.displayZoomPct}%</span>
 ```
 

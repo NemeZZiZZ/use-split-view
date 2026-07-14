@@ -27,6 +27,8 @@ interface UseSplitViewOptions {
   viewState?: ViewState
   /** Callback fired on every view change. Required for controlled mode. */
   onViewStateChange?: (view: ViewState) => void
+  /** Pass-through options forwarded to the underlying useZoomPinch instance. */
+  zoom?: SplitViewZoomOptions
 }
 ```
 
@@ -39,8 +41,9 @@ interface UseSplitViewReturn {
   setSplit: (value: number) => void
   view: ViewState
   setView: (v: ViewState, opts?: AnimationOptions) => void
-  centerZoom: (targetZoom: number) => void
-  resetView: () => void
+  centerZoom: (targetZoom: number, opts?: AnimationOptions) => void
+  resetView: (opts?: AnimationOptions) => void
+  isAnimating: boolean
   direction: SplitViewDirection
   isLocked: boolean
   setIsLocked: (locked: boolean) => void
@@ -53,6 +56,7 @@ interface UseSplitViewReturn {
   getPaneState: (part: "start" | "end") => SplitPaneState
   handleProps: HandleProps
   splitCSSValue: string
+  zoomApi: SplitViewZoomApi
 }
 ```
 
@@ -74,6 +78,36 @@ interface SplitPaneState {
   contentStyle: CSSProperties
 }
 ```
+
+### `SplitViewZoomOptions`
+
+Pass-through options for the underlying `useZoomPinch` instance. It's `UseZoomPinchOptions` minus the fields `useSplitView` owns (`containerRef`, scale/speed limits, view-state, `enabled`):
+
+```ts
+type SplitViewZoomOptions = Omit<
+  UseZoomPinchOptions,
+  | "containerRef"
+  | "minScale" | "maxScale"
+  | "panSpeed" | "zoomSpeed"
+  | "viewState" | "onViewStateChange"
+  | "enabled"
+>
+```
+
+Use it to enable bounds, inertia, keyboard navigation, rotation, double-tap, snap-to-grid, activation keys, and more. See [Advanced Zoom Options](/use-split-view/guides/advanced-zoom/).
+
+### `SplitViewZoomApi`
+
+The advanced imperative helpers from the same `useZoomPinch` instance that drives the panes (`view`, `setView`, `centerZoom`, `resetView`, `isAnimating` are exposed directly on `UseSplitViewReturn` and omitted here):
+
+```ts
+type SplitViewZoomApi = Omit<
+  UseZoomPinchReturn,
+  "view" | "setView" | "centerZoom" | "resetView" | "isAnimating"
+>
+```
+
+Includes `zoomIn`, `zoomOut`, `zoomTo`, `panTo`, `panBy`, `fitToRect`, `fitToContent`, `zoomToElement`, `rotateTo`, `rotateBy`, `snapZoom`, `screenToContent`, `contentToScreen`.
 
 ## Re-exported from `use-zoom-pinch`
 
@@ -99,6 +133,8 @@ interface AnimationOptions {
   duration?: number
   /** Easing function. @default easeOut */
   easing?: EasingFunction
+  /** Skip bounds clamping, axis locking, and snap-to-grid (setView only). @default false */
+  skipConstraints?: boolean
 }
 
 type EasingFunction = (t: number) => number
@@ -131,6 +167,20 @@ import { linear, easeOut, easeInOut } from "use-split-view"
 
 Predefined `EasingFunction` values that pair with `AnimationOptions.easing`. You can also supply any custom `(t: number) => number` function.
 
+## Geometry helpers
+
+Re-exported from `use-zoom-pinch`:
+
+```ts
+import { clamp, distance, angleBetween } from "use-split-view"
+
+clamp(value, min, max)              // clamp a number to [min, max]
+distance(x1, y1, x2, y2)            // euclidean distance between two points
+angleBetween(x1, y1, x2, y2)        // angle (degrees) of the vector (x1,y1)→(x2,y2)
+```
+
+Handy for building measurement overlays, markers, or custom snap logic on top of the split view.
+
 ## Importing
 
 ```ts
@@ -143,6 +193,8 @@ import type {
   UseSplitViewReturn,
   SplitViewDirection,
   SplitPaneState,
+  SplitViewZoomOptions,
+  SplitViewZoomApi,
 } from "use-split-view"
 
 // Re-exported view-state types
@@ -151,4 +203,7 @@ import type { ViewState, AnimationOptions, EasingFunction } from "use-split-view
 // Re-exported underlying hook
 import { useZoomPinch } from "use-split-view"
 import type { UseZoomPinchOptions, UseZoomPinchReturn } from "use-split-view"
+
+// Re-exported easing + geometry helpers
+import { linear, easeOut, easeInOut, clamp, distance, angleBetween } from "use-split-view"
 ```

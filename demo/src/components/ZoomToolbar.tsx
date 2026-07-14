@@ -11,7 +11,7 @@ export function ZoomToolbar({ sv }: { sv: UseSplitViewReturn }) {
           -
         </button>
         <button
-          onClick={sv.resetView}
+          onClick={() => sv.resetView()}
           className="text-zinc-300 hover:text-white min-w-14 px-2 py-1.5 text-center text-xs font-medium transition-colors"
         >
           {sv.displayZoomPct}%

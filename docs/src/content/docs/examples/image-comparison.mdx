@@ -131,7 +131,7 @@ export function ImageCompare({ beforeSrc, afterSrc, height = 500 }: Props) {
       {/* Zoom indicator / reset */}
       <button
         type="button"
-        onClick={resetView}
+        onClick={() => resetView()}
         style={{
           position: "absolute",
           top: 12,

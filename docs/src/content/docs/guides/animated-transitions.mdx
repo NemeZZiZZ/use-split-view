@@ -5,7 +5,7 @@ description: Smoothly animate zoom and pan changes using the AnimationOptions pa
 
 import { Aside } from "@astrojs/starlight/components"
 
-Starting with `use-split-view@0.2.0`, `setView` accepts an optional second argument `AnimationOptions` — forwarded directly from the underlying [use-zoom-pinch](https://nemezzizz.github.io/use-zoom-pinch/guides/animated-transitions/) hook. You can use this to animate programmatic view changes (reset, center, fit to detail) instead of snapping.
+Starting with `use-split-view@0.2.0`, `setView` accepts an optional second argument `AnimationOptions` — forwarded directly from the underlying [use-zoom-pinch](https://nemezzizz.github.io/use-zoom-pinch/guides/animated-transitions/) hook. Since `0.3.0`, `centerZoom` and `resetView` expose the same argument too. You can use this to animate programmatic view changes (reset, center, fit to detail) instead of snapping.
 
 ## Animated reset
 
@@ -56,30 +56,18 @@ interface AnimationOptions {
 
 ## Chaining with `centerZoom`
 
-<Aside type="note">
-  `centerZoom` in `useSplitView` wraps `useZoomPinch`'s `centerZoom`, which also accepts
-  `AnimationOptions` upstream — but `useSplitView`'s current return type exposes the simpler
-  `(targetZoom: number) => void` signature. For animated zoom, call `setView` directly with the
-  computed target.
-</Aside>
-
-A manual animated zoom-to-center helper:
+`centerZoom` accepts `AnimationOptions` as its second argument, so animated zoom-to-center is built in:
 
 ```tsx
-const { view, setView, containerSize } = useSplitView()
+const { view, centerZoom } = useSplitView()
 
-const animatedCenterZoom = (targetZoom: number) => {
-  const { w, h } = containerSize
-  const newZoom = Math.max(0.1, Math.min(targetZoom, 50))
-  setView(
-    {
-      zoom: newZoom,
-      x: view.x - (newZoom - view.zoom) * (w / 2),
-      y: view.y - (newZoom - view.zoom) * (h / 2),
-    },
-    { animate: true, duration: 250 },
-  )
-}
+centerZoom(view.zoom * 2, { animate: true, duration: 250 })
+```
+
+`resetView` likewise accepts options:
+
+```tsx
+resetView({ animate: true, duration: 400 })
 ```
 
 ## When not to animate

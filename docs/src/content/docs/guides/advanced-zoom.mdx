@@ -1,0 +1,152 @@
+---
+title: Advanced Zoom Options
+description: Enable bounds, inertia, keyboard, rotation, double-tap, and more by forwarding options to the underlying useZoomPinch instance.
+---
+
+import { Aside } from "@astrojs/starlight/components"
+
+`useSplitView` is built on top of [`useZoomPinch`](https://nemezzizz.github.io/use-zoom-pinch/), which supports inertia, bounds, keyboard navigation, rotation, double-tap, snap-to-grid, activation keys, and more. Starting with `use-split-view@0.3.0`, you can forward any of those options to the underlying instance via the `zoom` option — without losing the split-view wiring (container, scale limits, view state, and the drag-handle lock stay intact).
+
+## The `zoom` option
+
+`zoom` is a pass-through: every field is forwarded to the underlying `useZoomPinch` call, except the ones `useSplitView` already owns (`containerRef`, `minScale`/`maxScale`, `panSpeed`/`zoomSpeed`, `viewState`/`onViewStateChange`, `enabled`).
+
+```tsx
+const sv = useSplitView({
+  direction: "horizontal",
+  zoom: {
+    // any UseZoomPinchOptions field (minus owned ones) goes here
+  },
+})
+```
+
+## Pan bounds with bounce
+
+Keep the content from drifting out of the viewport:
+
+```tsx
+useSplitView({
+  zoom: {
+    bounds: {
+      minX: -500,
+      maxX: 500,
+      minY: -300,
+      maxY: 300,
+      mode: "bounce",
+      bounceFactor: 0.3,
+    },
+  },
+})
+```
+
+## Inertia (momentum) after pan
+
+Let the content glide to a stop after the user releases a drag:
+
+```tsx
+useSplitView({
+  zoom: {
+    inertia: { enabled: true, friction: 0.9 },
+  },
+})
+```
+
+Lower `friction` (closer to 0) stops sooner; higher (closer to 1) glides further.
+
+## Keyboard navigation
+
+Make the container focusable (`tabIndex={0}`) and pan/zoom with the arrow keys, `+`/`-`, etc.:
+
+```tsx
+const sv = useSplitView({
+  zoom: { keyboard: { enabled: true, panStep: 40, zoomStep: 1.5 } },
+})
+
+<div ref={sv.containerRef} tabIndex={0}>...</div>
+```
+
+## Double-tap / double-click zoom
+
+```tsx
+useSplitView({
+  zoom: {
+    doubleTap: { enabled: true, mode: "toggle", step: 2 },
+  },
+})
+```
+
+`mode` can be `"zoomIn"`, `"reset"`, or `"toggle"` (toggles between fit and `step`× zoom).
+
+## Rotation
+
+Enable two-finger rotation and constrain the angle:
+
+```tsx
+useSplitView({
+  zoom: {
+    gestures: { rotate: true },
+    rotation: { snapLevels: [0, 90, 180, 270] },
+  },
+})
+```
+
+## Snap-to-grid
+
+Snap the pan position to a grid of content-space pixels:
+
+```tsx
+useSplitView({
+  zoom: { snapToGrid: { size: 32, mode: "end" } },
+})
+```
+
+## Activation keys
+
+Require a modifier key for specific gestures — e.g. only pan while holding Space-like behavior, or zoom only with Alt:
+
+```tsx
+useSplitView({
+  zoom: {
+    activationKeys: { zoom: "Alt" },
+  },
+})
+```
+
+## Restricting gestures and axes
+
+Toggle gesture families or lock panning to a single axis:
+
+```tsx
+useSplitView({
+  zoom: {
+    gestures: { pan: true, zoom: true, rotate: false },
+    axis: "x",
+    wheelMode: "zoom",
+  },
+})
+```
+
+## Lifecycle callbacks
+
+React to gesture boundaries for analytics, lazy loading, or UI feedback:
+
+```tsx
+useSplitView({
+  zoom: {
+    onPanStart: (view) => console.log("pan start", view),
+    onZoomEnd: (view) => console.log("zoom end", view),
+    onTransformEnd: (view) => saveView(view),
+  },
+})
+```
+
+## Combining with the rest of the API
+
+Everything `useSplitView` exposes still works alongside `zoom` — `split`, `handleProps`, `getPaneState`, `setNaturalSize`, `zoomApi`, and the `isLocked` behavior from the drag handle all keep working. The `zoom` object only **adds** capabilities; it doesn't rewire the split.
+
+<Aside type="note">
+  Need the full field reference? See the
+  <a href="https://nemezzizz.github.io/use-zoom-pinch/">use-zoom-pinch docs</a> for every option
+  accepted by <code>UseZoomPinchOptions</code> — all of them (except the owned ones listed above)
+  are valid inside <code>zoom</code>.
+</Aside>

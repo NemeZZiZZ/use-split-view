@@ -4,6 +4,8 @@ export type {
   UseSplitViewReturn,
   SplitViewDirection,
   SplitPaneState,
+  SplitViewZoomOptions,
+  SplitViewZoomApi,
 } from "./use-split-view"
 
 export {
@@ -11,6 +13,9 @@ export {
   easeInOut,
   easeOut,
   linear,
+  clamp,
+  distance,
+  angleBetween,
 } from "use-zoom-pinch"
 
 export type {

@@ -47,6 +47,12 @@ All options are optional. Pass `{}` or nothing to get the defaults.
 
 See [Controlled View State](/use-split-view/guides/controlled-mode/) for patterns.
 
+### Pass-through
+
+| Option | Type                   | Default | Description                                                                                         |
+| ------ | ---------------------- | ------- | --------------------------------------------------------------------------------------------------- |
+| `zoom` | `SplitViewZoomOptions` | —       | Extra config forwarded to the underlying `useZoomPinch` (bounds, inertia, keyboard, rotation, …). See [Advanced Zoom Options](/use-split-view/guides/advanced-zoom/). |
+
 ---
 
 ## Return value
@@ -75,8 +81,9 @@ See [Controlled View State](/use-split-view/guides/controlled-mode/) for pattern
 | ----------------- | ------------------------------- | --------------------------------------------- |
 | `view`            | `ViewState`                     | Current `{ x, y, zoom }`                      |
 | `setView`         | `(v: ViewState, opts?: AnimationOptions) => void` | Set view directly, optionally animated       |
-| `centerZoom`      | `(targetZoom: number) => void`  | Zoom to target keeping container center fixed |
-| `resetView`       | `() => void`                    | Reset to `{ x: 0, y: 0, zoom: 1 }`            |
+| `centerZoom`      | `(targetZoom: number, opts?: AnimationOptions) => void` | Zoom to target keeping container center fixed, optionally animated |
+| `resetView`       | `(opts?: AnimationOptions) => void` | Reset to `{ x: 0, y: 0, zoom: 1 }`, optionally animated |
+| `isAnimating`     | `boolean`                       | Whether an animation is currently running     |
 | `isLocked`        | `boolean`                       | Whether zoom/pan is currently locked          |
 | `setIsLocked`     | `(locked: boolean) => void`     | Manually lock or unlock gestures              |
 
@@ -96,6 +103,22 @@ See [Controlled View State](/use-split-view/guides/controlled-mode/) for pattern
 | --------------- | ----------------------------------------------- | -------------------------------------------- |
 | `getPaneState`  | `(part: "start" \| "end") => SplitPaneState`    | Returns clip-path, transform, and content style for one pane |
 | `handleProps`   | `HandleProps`                                   | Spread on your drag handle element           |
+
+### Advanced zoom helpers
+
+| Property   | Type               | Description                                                                                       |
+| ---------- | ------------------ | ------------------------------------------------------------------------------------------------- |
+| `zoomApi`  | `SplitViewZoomApi` | Imperative helpers from the underlying `useZoomPinch` instance: `zoomIn`, `zoomOut`, `zoomTo`, `panTo`, `panBy`, `fitToRect`, `fitToContent`, `zoomToElement`, `rotateTo`, `rotateBy`, `snapZoom`, `screenToContent`, `contentToScreen` |
+
+`zoomApi` points at the **same** instance that drives the panes — use it for operations not exposed directly on the return object:
+
+```tsx
+const { zoomApi } = useSplitView()
+
+<button onClick={() => zoomApi.zoomIn()}>Zoom in</button>
+<button onClick={() => zoomApi.panTo(100, 50, { animate: true })}>Pan</button>
+<button onClick={() => zoomApi.fitToRect({ x: 0, y: 0, width: 400, height: 300 })}>Fit rect</button>
+```
 
 ---
 
@@ -148,6 +171,9 @@ import {
   easeInOut,
   easeOut,
   linear,
+  clamp,
+  distance,
+  angleBetween,
   type ViewState,
   type AnimationOptions,
   type BoundsOptions,

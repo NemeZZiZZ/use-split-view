@@ -32,6 +32,7 @@ export default defineConfig({
             { label: "The Drag Handle", slug: "guides/drag-handle" },
             { label: "Controlled View State", slug: "guides/controlled-mode" },
             { label: "Zoom Controls", slug: "guides/zoom-controls" },
+            { label: "Advanced Zoom Options", slug: "guides/advanced-zoom" },
             { label: "Locking Zoom/Pan", slug: "guides/locking" },
             { label: "Animated Transitions", slug: "guides/animated-transitions" },
           ],
